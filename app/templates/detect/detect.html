@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Screening Dashboard - NeuroScan AI{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h1 class="card-title">{{ t('Brain Tumor Screening') }}</h1>
+    <p class="card-subtitle">{{ t('Upload a medical MRI / CT scan (JPG, PNG, or DICOM .dcm)') }}</p>
+  </div>
+
+  <form method="POST" action="{{ url_for('detect.detect_view') }}" enctype="multipart/form-data" id="uploadForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+    <div style="border: 2px dashed var(--border-color); border-radius: var(--radius); padding: 2.5rem 1.5rem; text-align: center; background: #FAFDFE; cursor: pointer;" id="dropzone">
+      <input type="file" name="file" id="fileInput" accept=".jpg,.jpeg,.png,.dcm" style="display: none;" required>
+      <div id="dropzoneContent">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 0.75rem;">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        <p style="font-weight: 600; font-size: 1rem; margin-bottom: 0.25rem;">{{ t('Choose a scan or drag & drop here') }}</p>
+        <p style="color: var(--text-secondary); font-size: 0.85rem;">{{ t('Supports DICOM (.dcm), JPG, and PNG up to 10 MB') }}</p>
+      </div>
+      <div id="fileSelectedInfo" style="display: none; align-items: center; justify-content: center; gap: 0.75rem; margin-top: 0.5rem;">
+        <span class="badge" id="fileTypeBadge">FILE</span>
+        <span id="selectedFileName" style="font-weight: 600;"></span>
+      </div>
+    </div>
+
+    <!-- Confidence slider -->
+    <div style="margin-top: 1.5rem; display: flex; align-items: center; gap: 1rem; max-width: 400px;">
+      <label for="confThreshold" class="form-label" style="margin-bottom: 0; white-space: nowrap;">{{ t('Confidence Threshold:') }}</label>
+      <input type="range" id="confThreshold" name="confidence" min="0.10" max="0.95" step="0.05" value="{{ request.form.get('confidence', 0.40) }}" class="form-range" style="flex: 1;" oninput="document.getElementById('confVal').innerText = Math.round(this.value * 100) + '%'">
+      <span id="confVal" style="font-weight: 600; min-width: 45px; text-align: right;">40%</span>
+    </div>
+
+    <div style="margin-top: 1.5rem;">
+      <button type="submit" class="btn btn-primary" id="submitBtn">
+        {{ t('Run Tumor Detection') }}
+      </button>
+    </div>
+  </form>
+</div>
+
+{% if result %}
+<div class="card" id="resultCard">
+  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h2 class="card-title">{{ t('Screening Result') }}</h2>
+      <p class="card-subtitle">{{ t('YOLOv8 deep learning screening inference') }}</p>
+    </div>
+
+    <!-- Download report group -->
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
+      <select id="reportLangSelect" class="form-select" style="width: auto; padding: 0.35rem 0.65rem; font-size: 0.85rem;">
+        <option value="en">{{ t('English (EN)') }}</option>
+        <option value="hi">{{ t('हिन्दी (Hindi)') }}</option>
+      </select>
+      <button type="button" class="btn btn-outline btn-sm" onclick="downloadReport({{ scan.id if scan else 0 }})">
+        {{ t('Download Report') }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Low Confidence Warning -->
+  {% if scan and scan.confidence < 60.0 and scan.predicted_class != 'No tumor detected' %}
+    <div class="alert alert-warning" role="alert">
+      <span>⚠️ <strong>{{ t('Low confidence') }} ({{ "%.1f"|format(scan.confidence) }}%).</strong> {{ t('Please consult an expert.') }}</span>
+    </div>
+  {% endif %}
+
+  <!-- Heatmap Toggle (Phase 4) -->
+  {% if scan and scan.heatmap_image_path %}
+    <div class="toggle-wrapper">
+      <label class="switch">
+        <input type="checkbox" id="heatmapToggle" onchange="toggleHeatmap(this.checked)">
+        <span class="slider"></span>
+      </label>
+      <label for="heatmapToggle" style="font-weight: 600; cursor: pointer; font-size: 0.95rem;">{{ t('Show EigenCAM Heatmap') }}</label>
+    </div>
+    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: -0.5rem; margin-bottom: 1rem;">
+      {{ t('Heatmap shows where the model focused. It is not a tumor outline.') }}
+    </p>
+  {% endif %}
+
+  <!-- Image Display -->
+  <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-top: 1rem;">
+    <div style="text-align: center; background: #000; border-radius: var(--radius); overflow: hidden; max-height: 520px; display: flex; align-items: center; justify-content: center;">
+      {% if scan and scan.annotated_image_path %}
+        <img id="displayImage" src="{{ url_for('detect.uploaded_file', filename=scan.annotated_image_path) }}" alt="{{ t('Screening visualization') }}" style="max-width: 100%; max-height: 520px; object-fit: contain;">
+      {% endif %}
+    </div>
+
+    <!-- Metrics Card -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+      <div style="background: #F8FAFD; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem;">
+        <span style="font-size: 0.8rem; color: var(--text-secondary); display: block;">{{ t('Screening Result') }}</span>
+        <strong style="font-size: 1.15rem; color: {% if scan and scan.predicted_class != 'No tumor detected' %}var(--danger){% else %}var(--success){% endif %};">
+          {{ t(scan.predicted_class|capitalize) if scan else t('No tumor detected') }}
+        </strong>
+      </div>
+
+      <div style="background: #F8FAFD; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem;">
+        <span style="font-size: 0.8rem; color: var(--text-secondary); display: block;">{{ t('Confidence Score') }}</span>
+        <strong style="font-size: 1.15rem;">{{ "%.1f"|format(scan.confidence) if scan else "0.0" }}%</strong>
+      </div>
+
+      <div style="background: #F8FAFD; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem;">
+        <span style="font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 4px;">
+          {{ t('Estimated Tumor Size') }}
+          <span class="tooltip-container">
+            ℹ️
+            <span class="tooltip-text">{{ t('Approximate value from a 2D box, not a clinical measurement.') }}</span>
+          </span>
+        </span>
+        <strong style="font-size: 1.15rem;">
+          {% if scan and scan.tumor_area_percent is not none %}
+            {{ "%.2f"|format(scan.tumor_area_percent) }}% (Rel)
+          {% else %}
+            N/A
+          {% endif %}
+        </strong>
+        {% if scan and scan.tumor_size_mm %}
+          <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">{{ scan.tumor_size_mm }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Doctor Clinical Notes Form (Doctor role only) -->
+    {% if current_user.is_doctor and scan %}
+      <div style="margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+        <form method="POST" action="{{ url_for('history.update_notes', scan_id=scan.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <label class="form-label" for="clinicalNotes">{{ t('Clinical Notes (Doctor Only - included in PDF report)') }}</label>
+          <textarea id="clinicalNotes" name="clinical_notes" class="form-control" rows="3" placeholder="{{ t('Enter findings, differential considerations, or notes for the report...') }}">{{ scan.clinical_notes or '' }}</textarea>
+          <button type="submit" class="btn btn-outline btn-sm" style="margin-top: 0.5rem;">{{ t('Save Clinical Notes') }}</button>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<script>
+  // Drag and drop interaction
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const dropzoneContent = document.getElementById('dropzoneContent');
+  const fileSelectedInfo = document.getElementById('fileSelectedInfo');
+  const selectedFileName = document.getElementById('selectedFileName');
+  const fileTypeBadge = document.getElementById('fileTypeBadge');
+
+  dropzone.addEventListener('click', () => fileInput.click());
+
+  ['dragenter', 'dragover'].forEach(name => {
+    dropzone.addEventListener(name, (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = 'var(--primary)';
+      dropzone.style.background = '#EDF4FE';
+    });
+  });
+
+  ['dragleave', 'drop'].forEach(name => {
+    dropzone.addEventListener(name, (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = 'var(--border-color)';
+      dropzone.style.background = '#FAFDFE';
+    });
+  });
+
+  dropzone.addEventListener('drop', (e) => {
+    if (e.dataTransfer.files.length) {
+      fileInput.files = e.dataTransfer.files;
+      handleFileSelected(fileInput.files[0]);
+    }
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) {
+      handleFileSelected(fileInput.files[0]);
+    }
+  });
+
+  function handleFileSelected(file) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    selectedFileName.textContent = file.name;
+    fileTypeBadge.textContent = ext.toUpperCase();
+    if (ext === 'dcm') {
+      fileTypeBadge.className = 'badge badge-dicom';
+    } else {
+      fileTypeBadge.className = 'badge badge-student';
+    }
+    fileSelectedInfo.style.display = 'flex';
+  }
+
+  // Heatmap toggling (Phase 4)
+  {% if scan and scan.annotated_image_path and scan.heatmap_image_path %}
+    const annotatedUrl = "{{ url_for('detect.uploaded_file', filename=scan.annotated_image_path) }}";
+    const heatmapUrl = "{{ url_for('detect.uploaded_file', filename=scan.heatmap_image_path) }}";
+    function toggleHeatmap(showHeatmap) {
+      const img = document.getElementById('displayImage');
+      img.src = showHeatmap ? heatmapUrl : annotatedUrl;
+    }
+  {% endif %}
+
+  function downloadReport(scanId) {
+    if (!scanId) return;
+    const lang = document.getElementById('reportLangSelect').value;
+    window.location.href = `/report/${scanId}/${lang}`;
+  }
+</script>
+{% endblock %}

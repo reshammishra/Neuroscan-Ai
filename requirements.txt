@@ -1,0 +1,32 @@
+Flask>=3.0.0
+Werkzeug>=3.0.0
+Flask-Login>=0.6.3
+Flask-SQLAlchemy>=3.1.0
+Flask-WTF>=1.2.0
+WTForms>=3.1.0
+email-validator>=2.1.0
+SQLAlchemy>=2.0.0
+
+# Deep Learning & Vision
+torch>=2.0.0
+torchvision>=0.15.0
+ultralytics>=8.0.0
+opencv-python>=4.8.0
+Pillow>=10.0.0
+numpy>=1.24.0
+
+# DICOM Processing
+pydicom>=2.4.0
+
+# Model Explainability (EigenCAM on YOLOv8)
+grad-cam>=1.5.0
+
+# Multilingual PDF Reporting (Devanagari text shaping)
+fpdf2>=2.7.0
+uharfbuzz>=0.39.0
+
+# Testing
+pytest>=8.0.0
+pytest-cov>=4.1.0
+
+

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Brain Tumor Detection</title>
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: #f4f7fb;
+            color: #172033;
+        }
+        main {
+            width: min(900px, calc(100% - 32px));
+            margin: 48px auto;
+            padding: 32px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 12px 40px rgba(23, 32, 51, 0.12);
+        }
+        h1 {
+            margin-top: 0;
+            color: #173b77;
+        }
+        form {
+            margin: 24px 0;
+        }
+        input[type="file"] {
+            display: block;
+            margin-bottom: 14px;
+        }
+        button {
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 18px;
+            background: #2563eb;
+            color: white;
+            cursor: pointer;
+        }
+        .result {
+            margin-top: 24px;
+            padding: 16px;
+            background: #eef6ff;
+            border-left: 5px solid #2563eb;
+        }
+        .result strong {
+            display: block;
+            font-size: 1.2rem;
+            margin-bottom: 6px;
+        }
+        .error {
+            color: #b42318;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Brain Tumor Detection</h1>
+        <p>Upload a medical image to run the YOLOv8 brain tumor detector.</p>
+
+        <form method="post" enctype="multipart/form-data">
+            <input type="file" name="file" accept="image/*" required>
+            <button type="submit">Detect tumor</button>
+        </form>
+
+        {% if result %}
+        <section class="result" aria-live="polite">
+            <strong>{{ result }}</strong>
+            <div>Confidence: {{ confidence }}</div>
+            {% if file_path %}
+            <a href="{{ file_path }}">View uploaded image</a>
+            {% endif %}
+        </section>
+        {% endif %}
+    </main>
+</body>
+</html>

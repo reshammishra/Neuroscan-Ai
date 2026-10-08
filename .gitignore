@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+venv*/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# Local application data
+instance/
+uploads/
+*.db
+*.sqlite
+*.sqlite3
+
+# Generated training outputs and datasets
+runs/
+train/
+valid/
+test_images/
+models/*.pt
+
