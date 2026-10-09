@@ -27,4 +27,4 @@ train/
 valid/
 test_images/
 models/*.pt
-
+!models/best.pt

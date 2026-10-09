@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: neuroscan-ai
+    runtime: docker
+    plan: free
+    healthCheckPath: /login
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true

@@ -34,7 +34,7 @@ An educational, end-to-end Flask web application for computer-aided brain tumor 
    - **Privacy First**: Patient identifiers (`PatientName`, `PatientID`, birth date) are never stored or displayed. Original `.dcm` files are discarded immediately after in-memory conversion to PNG.
 
 3. **YOLOv8 Detection & Sizing**:
-   - Uses trained weights at `models/best.pt` (the model weights are not included in this source-only repository).
+   - Uses trained weights at `models/best.pt`.
    - Interactive confidence threshold slider (default 40%).
    - Brain contour estimation using Otsu thresholding on grayscale scans to compute relative tumor area `%`.
    - Physical millimeter estimation ($W \times H\text{ mm}$) when DICOM pixel spacing is present.
@@ -70,7 +70,7 @@ Brain_tumor_detection/
 │   │   ├── css/style.css        # Clean light theme design (#EEF4FF, Inter font)
 │   │   └── fonts/               # Noto Sans Latin & Devanagari fonts
 │   └── templates/               # Responsive Jinja2 templates
-├── models/                      # Place best.pt here (weights are not included)
+├── models/                      # Trained best.pt weights
 ├── tests/                       # Automated pytest suite
 ├── uploads/                     # Runtime scan storage (created locally)
 ├── app.py                       # Application runner
@@ -103,7 +103,7 @@ export DATABASE_URL="sqlite:///app.db"
 ```
 
 ### 4. Run the Application
-Place your trained YOLOv8 weights at `models/best.pt`. Model weights and training datasets are excluded from this source-only repository.
+The trained YOLOv8 weights are stored at `models/best.pt`. Training datasets and other model checkpoints are excluded from this repository.
 
 ```bash
 python app.py
@@ -118,11 +118,24 @@ This Flask application uses the Docker SDK on Hugging Face Spaces.
 
 1. Create a new Space at [huggingface.co/new-space](https://huggingface.co/new-space) and select **Docker** as the Space SDK.
 2. Push this repository's source to the new Space's Git repository. Do not push the local virtual environment, databases, uploads, or training datasets.
-3. Upload the trained `models/best.pt` file to the Space repository at that exact path. Model weights are excluded by `.gitignore`, so pushing the source repository alone will not upload the model.
+3. Push the repository, including `models/best.pt`, to the Space repository. Training datasets and other model checkpoints should not be pushed.
 4. In the Space settings, add a `SECRET_KEY` secret with a long, randomly generated value.
 5. Wait for the Docker build to finish, then open the Space URL.
 
 The Space runs on CPU by default. The SQLite database and uploaded scans are configured under `/data`; this directory is ephemeral unless persistent storage is enabled for the Space. Without persistent storage, account and scan data can be lost when the Space restarts. This project handles medical images, so use only synthetic or properly de-identified scans in a public demo.
+
+---
+
+## Deploying on Render
+
+This repository includes a Render Blueprint (`render.yaml`) for deploying the Flask app as a Docker web service.
+
+1. Sign in to [Render](https://render.com/) and choose **New > Blueprint**.
+2. Connect the GitHub repository and select the branch to deploy. Render reads `render.yaml` and creates the web service on the Free plan.
+3. Wait for the Docker build and deployment to complete, then open the service URL.
+4. The repository includes `models/best.pt`, so Render's Docker build can load the model. The weights will be public wherever this repository is public.
+
+The Free web service spins down after 15 minutes without traffic and may take about a minute to start on the next request. Its filesystem is ephemeral: the SQLite database and uploaded scans can be lost on restart, redeploy, or spin-down. Persistent disks require a paid plan. Do not use the free service for production or store real patient scans; use only synthetic or properly de-identified images in a public demo.
 
 ---
 
