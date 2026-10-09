@@ -1,3 +1,12 @@
+---
+title: NeuroScan AI
+emoji: 🧠
+colorFrom: blue
+colorTo: purple
+sdk: docker
+app_port: 7860
+---
+
 # NeuroScan AI: Brain Tumor Screening Web Platform
 
 Brain tumor detection web app using YOLOv8 and Flask. Supports JPG/PNG and DICOM MRI scans, Grad-CAM heatmaps, tumor size estimates, role-based login with scan history, and English/Hindi PDF reports.
@@ -100,6 +109,20 @@ Place your trained YOLOv8 weights at `models/best.pt`. Model weights and trainin
 python app.py
 ```
 Open your browser and navigate to: **`http://127.0.0.1:5000`**
+
+---
+
+## Deploying on Hugging Face Spaces
+
+This Flask application uses the Docker SDK on Hugging Face Spaces.
+
+1. Create a new Space at [huggingface.co/new-space](https://huggingface.co/new-space) and select **Docker** as the Space SDK.
+2. Push this repository's source to the new Space's Git repository. Do not push the local virtual environment, databases, uploads, or training datasets.
+3. Upload the trained `models/best.pt` file to the Space repository at that exact path. Model weights are excluded by `.gitignore`, so pushing the source repository alone will not upload the model.
+4. In the Space settings, add a `SECRET_KEY` secret with a long, randomly generated value.
+5. Wait for the Docker build to finish, then open the Space URL.
+
+The Space runs on CPU by default. The SQLite database and uploaded scans are configured under `/data`; this directory is ephemeral unless persistent storage is enabled for the Space. Without persistent storage, account and scan data can be lost when the Space restarts. This project handles medical images, so use only synthetic or properly de-identified scans in a public demo.
 
 ---
 

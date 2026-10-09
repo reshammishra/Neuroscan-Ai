@@ -16,9 +16,15 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Upload folder configuration
-    UPLOAD_FOLDER = os.path.join(os.path.dirname(BASE_DIR), 'uploads')
+    UPLOAD_FOLDER = os.environ.get(
+        'UPLOAD_FOLDER',
+        os.path.join(os.path.dirname(BASE_DIR), 'uploads')
+    )
     MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # 10 MB upload limit
     
     # YOLO Model configuration
-    MODEL_PATH = os.path.join(os.path.dirname(BASE_DIR), 'models', 'best.pt')
+    MODEL_PATH = os.environ.get(
+        'MODEL_PATH',
+        os.path.join(os.path.dirname(BASE_DIR), 'models', 'best.pt')
+    )
     ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'dcm'}
