@@ -7,6 +7,8 @@ sdk: docker
 app_port: 7860
 ---
 
+#LIVE DEMO https://neuroscan-ai-39dn.onrender.com
+
 # NeuroScan AI: Brain Tumor Screening Web Platform
 
 Brain tumor detection web app using YOLOv8 and Flask. Supports JPG/PNG and DICOM MRI scans, Grad-CAM heatmaps, tumor size estimates, role-based login with scan history, and English/Hindi PDF reports.
